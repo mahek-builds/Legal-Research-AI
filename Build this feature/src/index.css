@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --font-serif: 'Lora', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+
+  --color-navy-950: #080e1a;
+  --color-navy-900: #0b1220;
+  --color-navy-800: #121d30;
+  --color-navy-700: #1a2840;
+  --color-navy-600: #243356;
+  --color-navy-500: #2e4070;
+  --color-navy-400: #3d5490;
+  --color-navy-300: #5a72b0;
+  --color-navy-200: #8aa0cc;
+  --color-navy-100: #c4cfea;
+  --color-navy-50: #edf0f7;
+
+  --color-brass-700: #6b5230;
+  --color-brass-600: #8a6d3d;
+  --color-brass-500: #b08d57;
+  --color-brass-400: #c9a96e;
+  --color-brass-300: #dfc08e;
+  --color-brass-200: #eed9b8;
+  --color-brass-100: #f8f0e2;
+  --color-brass-50: #fdf8f0;
+
+  --color-parchment: #fafaf7;
+  --color-ink: #1a1e26;
+
+  /* Override Tailwind's slate to our custom values */
+  --color-slate-50: #f2f4f6;
+  --color-slate-100: #e8eaec;
+  --color-slate-200: #d8dce0;
+  --color-slate-300: #bcc3cb;
+  --color-slate-400: #9ba5b0;
+  --color-slate-500: #7a8694;
+  --color-slate-600: #5b6472;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-300);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-400);
+}

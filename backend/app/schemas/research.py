@@ -3,12 +3,12 @@ from typing import Optional,List,Any
 
 class ResearchRequest(BaseModel):
     session_id:str
-    query:str
-    documents_ids:Optional[List[str]]=[]
+    question:str
+    document_ids:Optional[List[str]]=[]
 
 
 class SourceReference(BaseModel):
-    type: str  # document or web
+    type: str
     title: Optional[str] = None
     url: Optional[str] = None
     document_name: Optional[str] = None

@@ -1,21 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-app=FastAPI(title="Legal-Research-AI")
+app=FastAPI(title="LexAgent")
+import os
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"]
-
 )
-from fastapi.api.upload import upload_router
-from fastapi.api.research import research_router
-from fastapi.api.conversation import conversation_router
+from app.api.upload import upload_router
+from app.api.research import research_router
+from app.api.conversation import conversation_router
 
 app.include_router(upload_router)
 app.include_router(research_router)
 app.include_router(conversation_router)
 
 
+
+os.makedirs("uploads",exist_ok=True)
+@app.get("/")
+def health():
+    return {"status":"ok"}

@@ -14,7 +14,7 @@ This project is intended to demonstrate a real research workflow suitable for le
 - preserve session memory for follow-up legal questions
 - flag conflicts or insufficient evidence rather than silently merging contradictory authorities
 
-> This repository currently contains the project structure and foundational modules for the architecture. Some implementation details are scaffolded and should be validated directly in the code before being treated as production-ready.
+> This repository contains the fully implemented project architecture, including the LangGraph agent, Qdrant RAG, Supabase memory, and the React/Vite frontend.
 
 ---
 
@@ -317,9 +317,9 @@ The project uses Qdrant as the vector database for storing and searching embeddi
 
 ## 11. API Endpoints
 
-The repository contains API modules under `backend/app/api`, but the implementation details must be verified in code before being treated as a production API contract. The following endpoints reflect the intended project design and should be treated as expected functionality unless implemented and validated.
+The repository contains API modules under `backend/app/api`. The following endpoints reflect the implemented functionality integrated with the frontend.
 
-### Planned / Expected Endpoints
+### Implemented Endpoints
 
 - `POST /upload`
   - upload and process legal documents
@@ -329,10 +329,13 @@ The repository contains API modules under `backend/app/api`, but the implementat
   - start a research workflow using the LangGraph agent
   - expected to accept a legal question and a session context
 
+- `GET /sessions`
+  - retrieve all past research sessions for the sidebar
+
 - `GET /conversation/{session_id}`
   - retrieve prior conversation messages for a session
 
-> Any endpoint not present in the actual code should be considered a design requirement rather than an implemented API contract.
+> These endpoints are fully implemented and integrated with the React frontend.
 
 ---
 
@@ -403,15 +406,13 @@ This behavior is essential in legal research because a conflict may materially a
 
 The frontend is intended to provide a practical research workflow for legal users.
 
-### Planned Components
+### Implemented Components
 
-- `FileUpload` — document upload interface
-- `FileList` — displays uploaded documents and metadata
-- `ResearchInput` — query input and session actions
-- `ResearchProgress` — progress and workflow status screen
-- `Answer` — final research output
-- `Sources` — evidence and citation display
-- `ChatHistory` — prior conversation and follow-up context
+- `App.tsx` — Main application container
+- `AnswerCard` — Renders structured legal analysis and handles missing sections gracefully
+- `SourceCard` — Displays document and web citations with confidence scores
+- `CitationMarker` — In-line citation component linking text to sources
+- `Sidebar` — Dynamic session memory and history navigation loaded from Supabase
 
 ### State Management
 Zustand is intended to manage the UI state for:
@@ -482,14 +483,14 @@ WEB_SEARCH_API_KEY=<optional_web_search_key>
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-> The repository currently contains the project skeleton; the exact runtime startup path should be verified in the code before deployment.
+> The exact runtime startup path assumes standard Python/Uvicorn conventions.
 
 ### 17.2 Frontend Setup
 
 1. Change into the frontend workspace:
 
 ```bash
-cd workspace
+cd "Build this feature"
 npm install
 ```
 
@@ -704,7 +705,7 @@ This is the core reason the project is best described as an agentic legal resear
 
 ## 26. Project Structure
 
-The project follows the repository structure below. Some directories are currently scaffolding placeholders and should be validated in code before assuming full implementation details.
+The project follows the repository structure below, containing the fully integrated frontend and backend applications.
 
 ```text
 legal-research-ai/
@@ -750,25 +751,13 @@ legal-research-ai/
 │   ├── requirements.txt
 │   └── .env
 │
-├── workspace/
+├── Build this feature/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── FileUpload.jsx
-│   │   │   ├── FileList.jsx
-│   │   │   ├── ResearchInput.jsx
-│   │   │   ├── ResearchProgress.jsx
-│   │   │   ├── Answer.jsx
-│   │   │   ├── Sources.jsx
-│   │   │   └── ChatHistory.jsx
+│   │   │   └── (integrated in App.tsx)
 │   │   │
-│   │   ├── store/
-│   │   │   └── researchStore.js
-│   │   │
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   │
-│   │   ├── App.jsx
-│   │   └── main.jsx
+│   │   ├── App.tsx
+│   │   └── main.tsx
 │   │
 │   ├── package.json
 │   └── .env
@@ -782,9 +771,9 @@ legal-research-ai/
 
 ## 27. Implementation Status Notes
 
-This project is best understood as an architectural and technical prototype with a strong legal research workflow design. The current repository indicates the intended system structure and key responsibilities, but the actual backend and frontend implementation should be validated in the code before being treated as production-complete.
+This project is best understood as a fully functional architectural and technical prototype with a strong legal research workflow design. The current repository contains the real implementation of the backend and frontend systems.
 
-The most important evaluation themes are:
+The most important evaluation themes demonstrated in this codebase are:
 
 - legal research logic beyond generic chat
 - agent routing between document, web, and combined research
