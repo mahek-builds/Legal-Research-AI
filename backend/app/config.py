@@ -6,7 +6,7 @@ load_dotenv()
 class Settings:
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "qwen/qwen3.8-27b")
-    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
     SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")

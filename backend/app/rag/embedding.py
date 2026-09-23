@@ -1,11 +1,22 @@
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 from app.config import settings
-model = SentenceTransformer(settings.EMBEDDING_MODEL)
-def embed_text(text):
-    return model.encode(text).tolist()
-def embed_batch(chunks):
+
+# Lazy model — only loaded on first embedding call.
+_model = None
+
+def get_model():
+    global _model
+    if _model is None:
+        _model = TextEmbedding(model_name=settings.EMBEDDING_MODEL)
+    return _model
+
+def embed_text(text: str) -> list:
+    embeddings = list(get_model().embed([text]))
+    return embeddings[0].tolist()
+
+def embed_batch(chunks: list) -> list:
     texts = [chunk["text"] for chunk in chunks]
-    vectors = model.encode(texts).tolist()
+    vectors = list(get_model().embed(texts))
     for i, chunk in enumerate(chunks):
-        chunk["embedding"] = vectors[i]
+        chunk["embedding"] = vectors[i].tolist()
     return chunks

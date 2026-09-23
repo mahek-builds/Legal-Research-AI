@@ -15,8 +15,9 @@ WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-cache embedding model
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+# Pre-download the fastembed ONNX model into the image cache.
+# fastembed uses ONNX Runtime (no PyTorch) — ~80MB RAM vs ~400MB for sentence_transformers.
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')"
 
 # Copy backend source code into container
 COPY backend/ .

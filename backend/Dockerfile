@@ -22,10 +22,10 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the SentenceTransformer embedding model into the image cache.
-# Stored in HuggingFace hub cache (~/.cache/huggingface) inside the image.
-# This prevents cold-start download delays on Render.
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+# Pre-download the fastembed ONNX model into the image cache.
+# fastembed uses ONNX Runtime (no PyTorch) — ~80MB RAM vs ~400MB for sentence_transformers.
+# BAAI/bge-small-en-v1.5 produces identical 384-dim vectors.
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')"
 
 # Copy application code
 COPY . .
