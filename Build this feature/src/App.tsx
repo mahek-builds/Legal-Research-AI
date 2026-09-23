@@ -539,7 +539,17 @@ export default function App() {
           document_ids: docs.filter(d => d.status === 'ready').map(d => d.id)
         })
       })
-      if (!res.ok) throw new Error('Research failed')
+      if (!res.ok) {
+        let errDetail = `Server returned status ${res.status}`
+        try {
+          const errData = await res.json()
+          if (errData.detail) errDetail = errData.detail
+          else if (errData.message) errDetail = errData.message
+        } catch {
+          // fallback to status
+        }
+        throw new Error(errDetail)
+      }
       const data = await res.json()
 
       clearInterval(stepInterval)

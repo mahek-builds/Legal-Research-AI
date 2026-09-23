@@ -55,7 +55,10 @@ workflow.add_edge("generate_answer", END)
 graph = workflow.compile()
 
 async def run_research(session_id, question, document_ids=None):
-    history = await get_session_messages(session_id)
+    try:
+        history = await get_session_messages(session_id)
+    except Exception as e:
+        history = []
     
     initial_state = {
         "session_id": session_id,
@@ -74,10 +77,25 @@ async def run_research(session_id, question, document_ids=None):
         "warnings": []
     }
 
-    result = graph.invoke(initial_state)
-
-    return {
-        "session_id": session_id,
-        "answer": result.get("answer", {}),
-        "status": result.get("status", "error")
-    }
+    try:
+        result = graph.invoke(initial_state)
+        return {
+            "session_id": session_id,
+            "answer": result.get("answer", {}),
+            "status": result.get("status", "complete")
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "session_id": session_id,
+            "answer": {
+                "summary": f"Research process encountered an issue: {str(e)}",
+                "relevant_facts": [],
+                "legal_issues": [],
+                "applicable_law": [],
+                "analysis": f"Detailed error: {str(e)}",
+                "conclusion": "Please try again or verify your API keys."
+            },
+            "status": "error"
+        }

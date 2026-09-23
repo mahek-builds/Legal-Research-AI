@@ -9,21 +9,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
-configured_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
-if not configured_origins or "*" in configured_origins:
-    allow_origins = ["*"]
-    allow_credentials = False
-else:
-    allow_origins = configured_origins
-    allow_credentials = True
-
+# Configure CORS - allow all frontend origins including Netlify & localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allow_origins,
-    allow_credentials=allow_credentials,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 from app.api.upload import upload_router
