@@ -3,6 +3,7 @@ from app.rag.loader import load_document
 from app.rag.chunker import chunk_text
 from app.rag.embeddings import embed_batch
 from app.rag.retriever import store_chunks
+from app.config import settings
 import shutil, os, uuid
 
 upload_router = APIRouter()
@@ -16,7 +17,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
     results = []
     for file in files:
         doc_id = str(uuid.uuid4())
-        save_path = os.path.join("uploads", f"{doc_id}.pdf")
+        save_path = os.path.join(settings.UPLOAD_DIR, f"{doc_id}.pdf")
 
         with open(save_path, "wb") as f:
             shutil.copyfileobj(file.file, f)

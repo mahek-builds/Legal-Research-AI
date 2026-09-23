@@ -1,0 +1,23 @@
+.git
+.github
+.gitignore
+.env
+*.env
+*.env.*
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+uploads/*
+!uploads/.gitkeep
+debug*.txt
+node_modules/
+"Build this feature"/
+dist/
+build/
+.vscode/
+.idea/

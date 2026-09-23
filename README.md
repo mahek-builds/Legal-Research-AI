@@ -510,20 +510,80 @@ npm run dev
 
 ## 18. Environment Variables
 
-The environment variables below are representative placeholders and must be validated against the implementation. Some are required only when the corresponding feature is enabled.
+### Backend (`backend/.env` / Render Environment Variables)
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `GROQ_API_KEY` | Yes | - | API key for Groq LLM inference (e.g. `qwen/qwen3.8-27b`) |
+| `TAVILY_API_KEY` | Yes | - | API key for Tavily legal web search |
+| `SUPABASE_URL` | Yes | - | Supabase project URL for conversation history |
+| `SUPABASE_KEY` | Yes | - | Supabase service role or anon key |
+| `QDRANT_MODE` | No | `memory` | Vector DB mode (`memory` for in-memory) |
+| `UPLOAD_DIR` | No | `uploads` | Directory for uploaded PDF documents |
+| `MAX_FILE_SIZE_MB` | No | `20` | Maximum file upload size in MB |
+| `ALLOWED_ORIGINS` | No | `*` | Allowed CORS origins (e.g. `https://your-app.netlify.app` or `*`) |
+| `LLM_MODEL` | No | `qwen/qwen3.8-27b` | Groq LLM model name |
+| `PORT` | Auto on Render | `8000` | Port for Uvicorn server |
+
+### Frontend (`Build this feature/.env` / Netlify Environment Variables)
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `LLM_API_KEY` | Yes, when using an LLM | API key for the deployed model provider |
-| `QDRANT_URL` | Yes, for RAG and vector storage | Qdrant endpoint |
-| `QDRANT_API_KEY` | Optional | API key for secured Qdrant deployments |
-| `SUPABASE_URL` | Yes, for conversation persistence | Supabase project URL |
-| `SUPABASE_KEY` | Yes, for database access | Supabase service or anon key depending on implementation |
-| `WEB_SEARCH_API_KEY` | Optional | API key for legal web search integration |
-| `JWT_SECRET` | Optional | if auth is added later |
-| `APP_ENV` | Optional | environment mode, such as dev or prod |
+| `VITE_API_BASE_URL` | Yes (in prod) | Backend URL (e.g. `https://legal-research-ai-backend.onrender.com`) |
 
-> Do not add undocumented variables to production configuration unless validated in the code.
+---
+
+## 18.1 Deployment Guide
+
+### A. Deploy Backend to Render (Docker Web Service)
+
+1. **Option 1: Render Blueprint (Fastest)**
+   - Connect your GitHub repository to Render.
+   - Choose **New > Blueprint**.
+   - Render will detect [`render.yaml`](file:///render.yaml) automatically.
+   - In the Render dashboard, input your secret environment variables (`GROQ_API_KEY`, `TAVILY_API_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`).
+   - Click **Apply**. Render will build the Docker container and start your backend service.
+
+2. **Option 2: Manual Web Service**
+   - Click **New > Web Service**.
+   - Select your repository.
+   - Choose **Docker** as the runtime.
+   - Set **Dockerfile Path**: `backend/Dockerfile`
+   - Set **Docker Context**: `backend` (or root context with root `Dockerfile`)
+   - Add the environment variables from the table above.
+   - Set Health Check Path to `/health`.
+   - Deploy! Note your Render service URL (e.g., `https://legal-research-ai-backend.onrender.com`).
+
+### B. Deploy Frontend to Netlify
+
+1. **Connect Repository to Netlify**:
+   - Go to [Netlify Dashboard](https://app.netlify.com) and click **Add new site > Import an existing project**.
+   - Choose GitHub and select your `Legal-Research-AI` repository.
+2. **Build Settings**:
+   - Netlify will automatically detect [`netlify.toml`](file:///netlify.toml):
+     - **Base directory**: `Build this feature`
+     - **Build command**: `npm run build`
+     - **Publish directory**: `Build this feature/dist`
+3. **Set Environment Variables**:
+   - Under **Site configuration > Environment variables**, add:
+     - `VITE_API_BASE_URL`: `https://your-backend-app.onrender.com` (your Render URL from step A).
+4. **Deploy**:
+   - Click **Deploy Site**. Netlify will build the Vite app and serve it with client-side SPA routing and HTTPS.
+
+### C. Continuous Integration & Deployment (GitHub Actions)
+
+This repository includes two GitHub Actions workflows:
+
+1. **CI Pipeline (`.github/workflows/ci.yml`)**:
+   - Runs on every push and pull request to `main`.
+   - Validates frontend dependencies, runs TypeScript checks, and builds Vite bundle.
+   - Validates Python code compilation.
+   - Verifies backend Dockerfile build.
+
+2. **Continuous Deployment (`.github/workflows/deploy.yml`)**:
+   - Automates deployment on push to `main`.
+   - **Netlify Deploy**: Add repository secrets `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` in your GitHub repository settings (`Settings > Secrets and variables > Actions`).
+   - **Render Deploy**: In your Render Web Service dashboard, copy your **Deploy Hook** URL and add it as `RENDER_DEPLOY_HOOK_URL` in your GitHub repository secrets.
 
 ---
 

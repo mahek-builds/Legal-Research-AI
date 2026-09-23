@@ -1,0 +1,59 @@
+name: CD Deploy to Netlify & Render
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-netlify:
+    name: Deploy Frontend to Netlify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'Build this feature/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: 'Build this feature'
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: 'Build this feature'
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        run: npm run build
+
+      - name: Deploy to Netlify
+        if: ${{ env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != '' }}
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './Build this feature/dist'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: 'Deploy from GitHub Actions [${{ github.sha }}]'
+          enable-pull-request-comment: false
+          enable-commit-comment: true
+          overwrites-pull-request-comment: false
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+  deploy-render:
+    name: Trigger Render Backend Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy Hook
+        if: ${{ env.RENDER_DEPLOY_HOOK_URL != '' }}
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Triggering Render deployment hook..."
+          curl -X POST -f "${RENDER_DEPLOY_HOOK_URL}"
+          echo "Render deployment triggered successfully."
