@@ -117,8 +117,18 @@ The system is designed around the principle that **legal research must be ground
 
 Unlike a direct RAG chatbot, LexAgent implements a stateful, conditional research graph using **LangGraph**. Each query passes through dedicated pipeline stages with conditional branching — the system can decide mid-execution to augment document retrieval with web search based on result confidence.
 
-```
-User Query → Understand → Plan → [DOCUMENT | WEB | BOTH] → Synthesize → Answer
+```mermaid
+flowchart LR
+    A([User Query]) --> B[Understand]
+    B --> C[Plan]
+    C --> D{Route}
+    D -->|has docs| E[DOCUMENT]
+    D -->|no docs| F[WEB]
+    D -->|insufficient chunks| G[BOTH]
+    E --> H[Synthesize]
+    F --> H
+    G --> H
+    H --> I([Structured Answer])
 ```
 
 The agent never short-circuits: even if documents are provided, it assesses adequacy before committing to a response.
@@ -175,52 +185,68 @@ Each session has a `session_id`. The last 6 messages (3 conversation turns) are 
 
 ### High-Level Architecture
 
-```
-┌──────────────────────────────────────────────────────┐
-│                   React + Vite Frontend               │
-│         (TypeScript, Tailwind CSS v4, Fetch API)      │
-└──────────────────┬───────────────────────────────────┘
-                   │ HTTP/REST
-                   ▼
-┌──────────────────────────────────────────────────────┐
-│                 FastAPI Backend (Uvicorn)              │
-│  ┌───────────┐ ┌──────────────┐ ┌─────────────────┐  │
-│  │ /upload   │ │  /research   │ │  /conversation   │  │
-│  │  Router   │ │   Router     │ │    /sessions     │  │
-│  └─────┬─────┘ └──────┬───────┘ └────────┬────────┘  │
-│        │              │                   │           │
-│        ▼              ▼                   ▼           │
-│  ┌──────────┐  ┌─────────────┐  ┌──────────────────┐ │
-│  │  RAG     │  │  LangGraph  │  │     Supabase     │ │
-│  │  Engine  │  │    Agent    │  │  (session store) │ │
-│  └──┬───────┘  └──────┬──────┘  └──────────────────┘ │
-│     │                 │                               │
-│  ┌──▼──────┐  ┌───────▼────────────────────────────┐ │
-│  │ Qdrant  │  │    Groq Inference (qwen-3.8-27b)   │ │
-│  │(in-mem) │  │    + Tavily Legal Web Search       │ │
-│  └─────────┘  └────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    User(["🧑‍💻 User Browser"]) -->|HTTP REST| FE
+
+    subgraph FE ["Frontend — Netlify"]
+        UI["React 19 + Vite 8\nTypeScript · Tailwind CSS v4"]
+    end
+
+    FE -->|POST /upload\nPOST /research\nGET /conversation| BE
+
+    subgraph BE ["Backend — Render (Docker)"]
+        API["FastAPI · Uvicorn"]
+        API --> Upload["/upload\nPDF Ingestion"]
+        API --> Research["/research\nAgent Invocation"]
+        API --> Conv["/conversation\n/sessions"]
+    end
+
+    Upload --> RAG
+    Research --> Agent
+    Conv --> Mem
+
+    subgraph RAG ["RAG Engine"]
+        Loader["PyPDF\nPage Extraction"] --> Chunker["Chunker\n800 char / 120 overlap"]
+        Chunker --> Embed["SentenceTransformer\nall-MiniLM-L6-v2"]
+        Embed --> VDB[("Qdrant\nIn-Memory\n384-dim COSINE")]
+    end
+
+    subgraph Agent ["LangGraph Agent"]
+        direction TB
+        N1[understand_query] --> N2[plan_research]
+        N2 --> N3[retrieve_documents]
+        N2 --> N4[web_research]
+        N3 --> N5[assess_research_need]
+        N5 --> N4
+        N5 --> N6[analyze_and_synthesize]
+        N4 --> N6
+        N6 --> N7[generate_answer]
+    end
+
+    VDB -->|top-k=5 chunks| N3
+    N4 <-->|advanced search| Tavily["🌐 Tavily\nLegal Web Search"]
+    N6 <-->|inference| Groq["⚡ Groq\nqwen-3.8-27b"]
+    N7 --> Mem
+
+    subgraph Mem ["Memory Layer"]
+        Supabase[("🗄️ Supabase\nPostgreSQL")]
+    end
 ```
 
 ### Document Processing Pipeline
 
-```
-PDF Upload
-    │
-    ▼
-PyPDF (page-level text extraction)
-    │
-    ▼
-Chunker (800 char chunks, 120 char overlap)
-    │
-    ▼
-SentenceTransformer: all-MiniLM-L6-v2 → 384-dim vectors
-    │
-    ▼
-Qdrant In-Memory (COSINE distance, upsert)
-    │
-    ▼
-Ready for semantic_search()
+```mermaid
+flowchart TD
+    A(["📄 PDF Upload"]) --> B["PyPDF\nPage-level text extraction"]
+    B --> C["Chunker\n800 char · 120 char overlap"]
+    C --> D["SentenceTransformer\nall-MiniLM-L6-v2"]
+    D --> E["384-dimensional\ndense vectors"]
+    E --> F[("Qdrant In-Memory\nCOSINE distance · upsert")]
+    F --> G(["✅ Ready for semantic_search()"])
+
+    style A fill:#1a2840,color:#fff
+    style G fill:#1a4d2e,color:#fff
 ```
 
 ---
@@ -229,56 +255,44 @@ Ready for semantic_search()
 
 The LangGraph agent compiles a `StateGraph` over `ResearchState`. Below is the conditional flow:
 
-```
-                    ┌─────────────────┐
-                    │  understand_query│
-                    │ (detects need   │
-                    │  for web auth.) │
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │   plan_research  │
-                    │ (sets initial   │
-                    │  research_route)│
-                    └────────┬────────┘
-                             │
-               ┌─────────────┼──────────────┐
-          has_documents?     │              no documents?
-               │                                 │
-    ┌──────────▼──────────┐          ┌───────────▼───────────┐
-    │  retrieve_documents  │          │      web_research      │
-    │  (Qdrant top-k=5)   │          │   (Tavily advanced)   │
-    └──────────┬──────────┘          └───────────┬───────────┘
-               │                                  │
-    ┌──────────▼──────────┐                       │
-    │  assess_research_need│                       │
-    │  (quality gate:      │                       │
-    │   chunk count check) │                       │
-    └──────────┬──────────┘                       │
-               │                                  │
-     ┌─────────┼──────────────┐                   │
-     │                        │                   │
-DOCUMENT only              BOTH/WEB               │
-     │                        │                   │
-     │             ┌──────────▼──────────┐        │
-     │             │    web_research      │        │
-     │             └──────────┬──────────┘        │
-     │                        │                   │
-     └───────────────┬─────────┘                  │
-                     │◄───────────────────────────┘
-          ┌──────────▼──────────┐
-          │ analyze_and_synthesize│
-          │  (LLM reasoning over │
-          │   all evidence)      │
-          └──────────┬──────────┘
-                     │
-          ┌──────────▼──────────┐
-          │   generate_answer    │
-          │ (build_citations +  │
-          │  save to Supabase)  │
-          └──────────┬──────────┘
-                     │
-                    END
+```mermaid
+flowchart TD
+    START(["User Query"]) --> A
+
+    A["🔍 understand_query\nDetect need for external authority\nCheck document availability"]
+    A --> B
+
+    B["📋 plan_research\nSet initial research_route\nDOCUMENT or WEB"]
+
+    B -->|has_documents = true| C
+    B -->|has_documents = false| E
+
+    C["📂 retrieve_documents\nQdrant semantic search\ntop_k = 5 chunks"]
+    C --> D
+
+    D{"⚖️ assess_research_need\nQuality gate"}
+    D -->|"chunks ≥ 3\nno external auth needed"| F
+    D -->|"chunks ≥ 3\nexternal auth needed"| E
+    D -->|"chunks < 3\nor zero results"| E
+
+    E["🌐 web_research\nTavily advanced search\nlegal query augmentation"]
+    E --> F
+
+    F["🧠 analyze_and_synthesize\nFuse document + web evidence\nConstrained LLM reasoning\nJSON schema output"]
+    F --> G
+
+    G["📝 generate_answer\nbuild_citations()\nSave to Supabase memory"]
+    G --> END_NODE(["✅ Structured Legal Answer"])
+
+    style START fill:#1a2840,color:#fff,stroke:#3d5490
+    style END_NODE fill:#1a4d2e,color:#fff,stroke:#2d8653
+    style D fill:#4a3000,color:#fff,stroke:#b08d57
+    style A fill:#0b1220,color:#c4cfea,stroke:#3d5490
+    style B fill:#0b1220,color:#c4cfea,stroke:#3d5490
+    style C fill:#0b1220,color:#c4cfea,stroke:#3d5490
+    style E fill:#0b1220,color:#c4cfea,stroke:#3d5490
+    style F fill:#0b1220,color:#c4cfea,stroke:#3d5490
+    style G fill:#0b1220,color:#c4cfea,stroke:#3d5490
 ```
 
 ### Agent State Schema (`ResearchState`)
@@ -747,41 +761,42 @@ docker run -p 8000:8000 \
 
 Triggered on every `push` and `pull_request` to `main`.
 
-```
-┌─────────────────────────────┐
-│  frontend-ci (Node 20)      │
-│  ├── npm ci                 │
-│  ├── tsc --noEmit           │
-│  └── vite build             │
-└─────────────────────────────┘
+```mermaid
+flowchart TD
+    Push(["git push / Pull Request → main"]) --> CI
 
-┌─────────────────────────────┐
-│  backend-ci (Python 3.11)   │
-│  ├── pip install -r reqs    │
-│  └── python -m compileall   │
-└─────────────────────────────┘
+    subgraph CI ["ci.yml — runs in parallel"]
+        direction LR
+        FE_CI["🟩 frontend-ci\nNode 20\nnpm ci\ntsc --noEmit\nvite build"]
+        BE_CI["🐍 backend-ci\nPython 3.11\npip install\ncompileall"]
+        DK_CI["🐳 docker-ci\ndocker/buildx\nbuild --no-push"]
+    end
 
-┌─────────────────────────────┐
-│  docker-ci                  │
-│  └── docker build (no push) │
-└─────────────────────────────┘
+    CI --> Pass{"All jobs pass?"}
+    Pass -->|No| Fail(["❌ Block merge"])
+    Pass -->|Yes| OK(["✅ CI Green"])
 ```
 
 ### CD Pipeline (`.github/workflows/deploy.yml`)
 
 Triggered on every push to `main`.
 
-```
-┌─────────────────────────────────────────────────┐
-│  deploy-netlify                                 │
-│  ├── npm ci + vite build                        │
-│  └── nwtgck/actions-netlify → Netlify CDN       │
-└─────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Merge(["Merge to main"]) --> CD
 
-┌─────────────────────────────────────────────────┐
-│  deploy-render                                  │
-│  └── curl POST ${RENDER_DEPLOY_HOOK_URL}        │
-└─────────────────────────────────────────────────┘
+    subgraph CD ["deploy.yml — runs in parallel"]
+        direction LR
+        NET["🔷 deploy-netlify\nnpm ci\nvite build\nactions-netlify\n→ Netlify CDN"]
+        RND["🟣 deploy-render\ncurl POST\nRENDER_DEPLOY_HOOK_URL\n→ Docker rebuild"]
+    end
+
+    CD --> FE_Live(["✅ Frontend Live\nNetlify Edge CDN"])
+    CD --> BE_Live(["✅ Backend Live\nRender Docker Service"])
+
+    style Merge fill:#1a2840,color:#fff
+    style FE_Live fill:#1a4d2e,color:#fff
+    style BE_Live fill:#1a4d2e,color:#fff
 ```
 
 ### Required GitHub Secrets
