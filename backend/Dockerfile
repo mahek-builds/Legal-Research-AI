@@ -2,9 +2,10 @@
 FROM python:3.11-slim
 
 # Set environment variables
+# Note: PORT is intentionally NOT set here — Render injects it at runtime.
+# Setting it here could shadow Render's dynamic value.
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PYTHONUNBUFFERED=1
 
 # Install minimal OS dependencies for building Python wheels and curl for healthchecks
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -21,8 +22,9 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the SentenceTransformer embedding model into the image cache
-# This prevents timeouts and memory spikes on initial cold-starts in Render
+# Pre-download the SentenceTransformer embedding model into the image cache.
+# Stored in HuggingFace hub cache (~/.cache/huggingface) inside the image.
+# This prevents cold-start download delays on Render.
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 # Copy application code
@@ -31,12 +33,15 @@ COPY . .
 # Ensure upload directory exists
 RUN mkdir -p uploads
 
-# Expose default port (Render will override PORT dynamically)
-EXPOSE 8000
+# Render dynamically injects $PORT (default 10000).
+# We EXPOSE 10000 as a hint, but the CMD always reads the runtime $PORT.
+EXPOSE 10000
 
-# Health check to ensure service is responding
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+# Health check using runtime $PORT — Render probes /health after the port is bound
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-10000}/health || exit 1
 
-# Start Uvicorn, evaluating $PORT at runtime
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start Uvicorn.
+# All external clients (Groq, Supabase, Tavily) are now lazy-loaded,
+# so uvicorn binds to $PORT immediately before any network I/O.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1"]
