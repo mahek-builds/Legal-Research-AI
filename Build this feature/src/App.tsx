@@ -72,94 +72,7 @@ const SUGGESTED_QUERIES = [
   'Compare the uploaded judgment against Smith v. Jones — where do they conflict?',
 ]
 
-const SAMPLE_SESSIONS: Session[] = [
-  { id: 's1', title: 'Arbitration clause enforceability', timestamp: new Date('2026-09-22T14:30:00') },
-  { id: 's2', title: 'Ninth Circuit injunction standard', timestamp: new Date('2026-09-21T09:15:00') },
-  { id: 's3', title: 'Products liability — duty to warn', timestamp: new Date('2026-09-19T16:45:00') },
-  { id: 's4', title: 'Employment discrimination — disparate impact', timestamp: new Date('2026-09-15T11:00:00') },
-]
-
-const SAMPLE_SOURCES: Source[] = [
-  {
-    id: 'src1',
-    type: 'web',
-    title: 'AT&T Mobility LLC v. Concepcion',
-    authority: 'U.S. Supreme Court',
-    date: '2011-04-27',
-    excerpt: 'The FAA\'s overarching purpose is to ensure the enforcement of arbitration agreements according to their terms so as to facilitate streamlined proceedings.',
-    citation: '563 U.S. 333 (2011)',
-  },
-  {
-    id: 'src2',
-    type: 'document',
-    title: 'Service Agreement — Section 14.2',
-    authority: 'Uploaded Document',
-    date: '2024-03-15',
-    excerpt: 'Any dispute arising out of or related to this Agreement shall be resolved by binding arbitration administered by the American Arbitration Association.',
-    citation: 'Service Agreement, p. 12 ¶ 14.2',
-  },
-  {
-    id: 'src3',
-    type: 'web',
-    title: 'Lamps Plus, Inc. v. Varela',
-    authority: 'U.S. Supreme Court',
-    date: '2019-04-24',
-    excerpt: 'Courts may not infer from an ambiguous agreement that the parties have consented to arbitrate on a classwide basis.',
-    citation: '587 U.S. 176 (2019)',
-    conflicting: true,
-  },
-  {
-    id: 'src4',
-    type: 'web',
-    title: '9 U.S.C. § 2 — Validity, Irrevocability and Enforcement of Agreements',
-    authority: 'Federal Statute',
-    date: '1947-07-30',
-    excerpt: 'A written provision in any maritime transaction or a contract evidencing a transaction involving commerce to settle by arbitration a controversy thereafter arising...',
-    citation: '9 U.S.C. § 2',
-  },
-]
-
-const SAMPLE_MESSAGES: Message[] = [
-  {
-    id: 'm1',
-    role: 'user',
-    content: 'Under the uploaded service agreement, is the arbitration clause enforceable if the counterparty argues it lacks mutual assent?',
-    timestamp: new Date('2026-09-22T14:32:00'),
-  },
-  {
-    id: 'm2',
-    role: 'agent',
-    content: '',
-    sections: [
-      {
-        title: 'Summary',
-        content: 'Based on the uploaded Service Agreement and controlling federal precedent, the arbitration clause in § 14.2 is likely enforceable. The clause satisfies the FAA\'s requirements under 9 U.S.C. § 2, and the mutual assent challenge faces a high bar under AT&T Mobility LLC v. Concepcion [1].',
-        citations: [1],
-      },
-      {
-        title: 'Relevant Facts',
-        content: 'The Service Agreement (uploaded, p. 12) contains a broad arbitration clause in § 14.2 covering "any dispute arising out of or related to" the Agreement. The clause names the AAA as administrator and waives class proceedings. The counterparty signed the Agreement on March 15, 2024.',
-        citations: [2],
-      },
-      {
-        title: 'Applicable Law',
-        content: 'The Federal Arbitration Act, 9 U.S.C. § 2 [4], provides that arbitration clauses in contracts involving commerce are "valid, irrevocable, and enforceable, save upon such grounds as exist at law or in equity for the revocation of any contract." This creates a strong federal presumption of enforceability.',
-        citations: [4],
-      },
-      {
-        title: 'Analysis',
-        content: 'A mutual assent challenge requires the counterparty to demonstrate that no meeting of the minds occurred on the arbitration term specifically. Courts applying Concepcion [1] apply general contract formation principles but give effect to the FAA\'s liberal policy favoring arbitration. Notably, in Lamps Plus [3], the Court reaffirmed that ambiguity is resolved against class arbitration — but that holding does not disturb the threshold enforceability analysis here.',
-        citations: [1, 3],
-      },
-      {
-        title: 'Conclusion',
-        content: 'The clause is enforceable. The counterparty\'s mutual assent argument is unlikely to succeed absent affirmative evidence that they were prevented from reviewing § 14.2 or that the term was fraudulently concealed.',
-      },
-    ],
-    sources: SAMPLE_SOURCES,
-    timestamp: new Date('2026-09-22T14:32:18'),
-  },
-]
+// No mock data — all sessions and messages are loaded from the live API.
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -779,9 +692,9 @@ export default function App() {
             </svg>
           </button>
 
-          {hasConversation && (
+          {hasConversation && messages.length > 0 && (
             <h1 className="text-sm font-medium text-navy-800 font-serif truncate">
-              Service agreement enforceability — mutual assent
+              {messages.find(m => m.role === 'user')?.content?.slice(0, 60) ?? 'Research Session'}{(messages.find(m => m.role === 'user')?.content?.length ?? 0) > 60 ? '…' : ''}
             </h1>
           )}
 
