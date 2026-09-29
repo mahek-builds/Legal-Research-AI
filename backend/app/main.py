@@ -29,6 +29,19 @@ app.include_router(conversation_router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
+@app.on_event("startup")
+async def warmup():
+    """Pre-load the embedding model on startup so uploads process instantly."""
+    import logging
+    log = logging.getLogger("lexagent")
+    log.info("Pre-loading FastEmbed model...")
+    try:
+        from app.rag.embeddings import get_embedding_model
+        get_embedding_model()
+        log.info("FastEmbed model ready!")
+    except Exception as e:
+        log.error(f"Warmup error: {e}")
+
 @app.get("/")
 def root():
     return {"status": "ok", "service": "LexAgent API", "version": "1.0.0"}

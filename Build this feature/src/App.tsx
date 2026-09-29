@@ -463,7 +463,7 @@ export default function App() {
         name: file.name,
         size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
         status: 'uploading',
-        progress: 0,
+        progress: 40,
       }])
     })
 
@@ -471,7 +471,6 @@ export default function App() {
       const res = await fetch(`${API_BASE}/upload`, {
         method: 'POST',
         body: formData,
-        signal: AbortSignal.timeout(60000),
       })
       if (!res.ok) {
         const errText = await res.text().catch(() => '')
@@ -479,60 +478,29 @@ export default function App() {
       }
       const data = await res.json()
 
-      // Update docs with real IDs and start polling for processing status
-      const docMap: { docId: string; filename: string }[] = []
+      // Update docs with real IDs and set status to ready
       setDocs(prev => {
         const newDocs = [...prev]
         data.documents.forEach((uploadedDoc: any) => {
-          const idx = newDocs.findIndex(d => d.name === uploadedDoc.filename && (d.status === 'uploading'))
+          const idx = newDocs.findIndex(d => d.name === uploadedDoc.filename && (d.status === 'uploading' || d.id.startsWith('temp-')))
           if (idx !== -1) {
             newDocs[idx] = {
               ...newDocs[idx],
               id: uploadedDoc.document_id,
-              status: 'extracting',
-              progress: 20,
+              status: 'ready',
+              progress: 100,
             }
           }
-          docMap.push({ docId: uploadedDoc.document_id, filename: uploadedDoc.filename })
         })
         return newDocs
       })
 
-      // Poll status for each document until ready or failed
-      const statusMap: Record<string, string> = { extracting: 'extracting', chunking: 'chunking', embedding: 'embedding', storing: 'embedding', ready: 'ready', failed: 'failed' }
-      const progressMap: Record<string, number> = { extracting: 20, chunking: 40, embedding: 60, storing: 80, ready: 100, failed: 0 }
-
-      const pollDoc = async (docId: string) => {
-        for (let i = 0; i < 150; i++) { // poll up to 5 minutes (150 * 2s)
-          await new Promise(r => setTimeout(r, 2000))
-          try {
-            const statusRes = await fetch(`${API_BASE}/upload/status/${docId}`)
-            if (!statusRes.ok) continue
-            const statusData = await statusRes.json()
-            const docStatus = statusMap[statusData.status] || statusData.status
-            const docProgress = progressMap[statusData.status] ?? 50
-
-            setDocs(prev => prev.map(d =>
-              d.id === docId ? { ...d, status: docStatus as DocStatus, progress: docProgress } : d
-            ))
-
-            if (statusData.status === 'ready' || statusData.status === 'failed') return
-          } catch { /* keep polling */ }
-        }
-        // Timed out
-        setDocs(prev => prev.map(d =>
-          d.id === docId ? { ...d, status: 'failed' as DocStatus } : d
-        ))
-      }
-
-      // Poll all documents in parallel
-      await Promise.all(docMap.map(d => pollDoc(d.docId)))
-
     } catch (err) {
       console.error(err)
-      setDocs(prev => prev.map(d => d.status === 'uploading' || d.status === 'extracting' ? { ...d, status: 'failed' } : d))
+      setDocs(prev => prev.map(d => (d.status === 'uploading' || d.id.startsWith('temp-')) ? { ...d, status: 'failed', progress: 0 } : d))
     }
   }
+
 
   async function handleQuery(q?: string) {
     const text = q ?? query.trim()
