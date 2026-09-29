@@ -29,19 +29,6 @@ app.include_router(conversation_router)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-@app.on_event("startup")
-async def warmup():
-    """Pre-load the embedding model so the first upload doesn't stall."""
-    import logging
-    log = logging.getLogger("lexagent")
-    log.info("Pre-loading embedding model...")
-    try:
-        from app.rag.embeddings import get_model
-        get_model()
-        log.info("Embedding model ready.")
-    except Exception as e:
-        log.warning(f"Model warmup failed (will retry on first upload): {e}")
-
 @app.get("/")
 def root():
     return {"status": "ok", "service": "LexAgent API", "version": "1.0.0"}
