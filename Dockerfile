@@ -2,7 +2,12 @@
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+  PYTHONUNBUFFERED=1 \
+  OMP_NUM_THREADS=1 \
+  OPENBLAS_NUM_THREADS=1 \
+  MKL_NUM_THREADS=1 \
+  ONNXRUNTIME_NUM_THREADS=1 \
+  TOKENIZERS_PARALLELISM=false
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -14,10 +19,6 @@ WORKDIR /app
 # Copy backend requirements and install
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Pre-download the fastembed ONNX model into the image cache.
-# fastembed uses ONNX Runtime (no PyTorch) — ~80MB RAM vs ~400MB for sentence_transformers.
-RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')"
 
 # Copy backend source code into container
 COPY backend/ .
