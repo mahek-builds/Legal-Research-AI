@@ -5,6 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  VITE_API_BASE_URL = "https://legal-research-ai-backend.onrender.com"
 
 # Redirect rules for Single Page Application routing
 [[redirects]]
