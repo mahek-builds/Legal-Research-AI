@@ -471,6 +471,7 @@ export default function App() {
       const res = await fetch(`${API_BASE}/upload`, {
         method: 'POST',
         body: formData,
+        signal: AbortSignal.timeout(120000),
       })
       if (!res.ok) throw new Error('Upload failed')
       const data = await res.json()
@@ -533,6 +534,7 @@ export default function App() {
       const res = await fetch(`${API_BASE}/research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(120000),
         body: JSON.stringify({
           session_id: activeSession,
           question: text,
