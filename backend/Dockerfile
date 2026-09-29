@@ -5,7 +5,12 @@ FROM python:3.11-slim
 # Note: PORT is intentionally NOT set here — Render injects it at runtime.
 # Setting it here could shadow Render's dynamic value.
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+  PYTHONUNBUFFERED=1 \
+  OMP_NUM_THREADS=1 \
+  OPENBLAS_NUM_THREADS=1 \
+  MKL_NUM_THREADS=1 \
+  ONNXRUNTIME_NUM_THREADS=1 \
+  TOKENIZERS_PARALLELISM=false
 
 # Install minimal OS dependencies for building Python wheels and curl for healthchecks
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -21,11 +26,6 @@ COPY requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Pre-download the fastembed ONNX model into the image cache.
-# fastembed uses ONNX Runtime (no PyTorch) — ~80MB RAM vs ~400MB for sentence_transformers.
-# BAAI/bge-small-en-v1.5 produces identical 384-dim vectors.
-RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')"
 
 # Copy application code
 COPY . .

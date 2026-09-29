@@ -9,7 +9,7 @@ _model = None
 def get_model():
     global _model
     if _model is None:
-        _model = TextEmbedding(model_name=settings.EMBEDDING_MODEL)
+        _model = TextEmbedding(model_name=settings.EMBEDDING_MODEL, threads=1)
     return _model
 
 def embed_text(text: str) -> list:
@@ -18,7 +18,8 @@ def embed_text(text: str) -> list:
 
 def embed_batch(chunks: list) -> list:
     texts = [chunk["text"] for chunk in chunks]
-    vectors = list(get_model().embed(texts))
+    # Keep ONNX activation memory bounded for large PDF uploads.
+    vectors = list(get_model().embed(texts, batch_size=8))
     for i, chunk in enumerate(chunks):
         chunk["embedding"] = vectors[i].tolist()
     return chunks
