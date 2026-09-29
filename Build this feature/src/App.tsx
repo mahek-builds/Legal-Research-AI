@@ -471,9 +471,12 @@ export default function App() {
       const res = await fetch(`${API_BASE}/upload`, {
         method: 'POST',
         body: formData,
-        signal: AbortSignal.timeout(120000),
+        signal: AbortSignal.timeout(300000),
       })
-      if (!res.ok) throw new Error('Upload failed')
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        throw new Error(`Upload failed (${res.status}): ${errText}`)
+      }
       const data = await res.json()
       
       setDocs(prev => {
